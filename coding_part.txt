@@ -1,0 +1,73 @@
+CREATE OR REPLACE PROCEDURE group_by_genreID IS
+    CURSOR c_game IS
+        SELECT genreID, COUNT(gameID) AS total_games, AVG(game_rating) AS avg_rating, SUM(game_cost) AS total_cost
+        FROM game
+        GROUP BY genreID;
+    rec_game c_game%ROWTYPE;
+BEGIN
+    OPEN c_game;
+    LOOP
+        FETCH c_game INTO rec_game;
+        EXIT WHEN c_game%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('GenreID: ' || rec_game.genreID);
+        DBMS_OUTPUT.PUT_LINE('Total Games: ' || rec_game.total_games);
+        DBMS_OUTPUT.PUT_LINE('Average Rating: ' || TO_CHAR(rec_game.avg_rating, 'fm99990.00'));
+        DBMS_OUTPUT.PUT_LINE('Total Cost: ' || rec_game.total_cost);
+        DBMS_OUTPUT.PUT_LINE(' ');
+    END LOOP;
+    CLOSE c_game;
+END;
+----------------------------------------
+
+
+
+CREATE OR REPLACE TRIGGER validate_game_name
+BEFORE INSERT ON game
+FOR EACH ROW
+BEGIN
+IF LENGTH(:NEW.game_name) < 5 THEN
+    RAISE_APPLICATION_ERROR(-20001, 'GAME_NAME should be at least 5 characters long');END IF;
+END;
+-----------------------------------------
+
+
+CREATE OR REPLACE PROCEDURE count_customers_by_platform(p_platformID IN NUMBER) AS
+  v_num_customers NUMBER;
+BEGIN
+  SELECT COUNT(DISTINCT customerID) INTO v_num_customers
+  FROM BOB_Store
+  WHERE platformID = p_platformID;
+  
+  DBMS_OUTPUT.PUT_LINE('Number of customers using platform ' || p_platformID || ': ' || v_num_customers);
+  DBMS_OUTPUT.PUT_LINE('Number of rows affected: ' || SQL%ROWCOUNT);
+END;
+BEGIN
+  count_customers_by_platform(2);
+END;
+------------------------------------------
+
+CREATE OR REPLACE TRIGGER sales_before_insert
+BEFORE INSERT ON sales
+FOR EACH ROW
+DECLARE
+  rows_count NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO rows_count FROM sales;
+  DBMS_OUTPUT.PUT_LINE('Current number of rows in sales table: ' || rows_count);
+END;
+
+
+INSERT INTO sales (salesId, begin_date, end_date, sale_name, percent, genreId)
+VALUES (17, TO_DATE('2023-05-01', 'YYYY-MM-DD'), TO_DATE('2023-05-31', 'YYYY-MM-DD'), 'May Sale', 15, 2);
+--------------------------------------------
+
+CREATE OR REPLACE FUNCTION top_games
+RETURN NUMBER
+IS
+  v_count NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_count FROM game WHERE game_rating >= 9;
+  RETURN v_count;
+END;
+
+SELECT top_games() FROM dual;
